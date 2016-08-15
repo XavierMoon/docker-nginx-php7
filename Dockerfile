@@ -32,6 +32,8 @@ ENV WEB_URL www.localtest.yundoukuaiji.com
 ## RUN rpm -Uvh http://mirrors.ustc.edu.cn/centos/7.0.1406/extras/x86_64/Packages/epel-release-7-5.noarch.rpm && \
 RUN rpm -ivh http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm && \
     yum install -y wget \
+    vim \   #INSTALL VIM
+    openssh-clients openssh-server \ #INSTALL SSH
     zlib \
     zlib-devel \
     openssl \
@@ -41,6 +43,7 @@ RUN rpm -ivh http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch
     libxml2-devel \
     libcurl \
     libcurl-devel \
+    git \
     libpng-devel \
     libicu-devel \
     libjpeg-devel \
@@ -48,18 +51,21 @@ RUN rpm -ivh http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch
     libmcrypt-devel \
     openssh-server \
     python-setuptools && \
-    yum clean all
+    yum clean all \
+
+#SSH SERVER SETTING
+RUN echo 'root:hadoop' |chpasswd
+RUN sed -i '/pam_loginuid.so/c session optional pam_loginuid.so'  /etc/pam.d/sshd
 
 
-
-#Add user
-RUN groupadd -r www && \
-    useradd -M -s /sbin/nologin -r -g www www
+#Add user 不添加www用户  [ref:dev开发中文件权限问题]
+#RUN groupadd -r www && \
+ #   useradd -M -s /sbin/nologin -r -g www www
 
 #Download nginx & php
 RUN mkdir -p /home/nginx-php && cd $_ && \
     wget -c -O nginx.tar.gz http://nginx.org/download/nginx-$NGINX_VERSION.tar.gz && \
-    wget -O php.tar.gz http://php.net/distributions/php-$PHP_VERSION.tar.gz && \
+    wget -O php.tar.gz http://php.net/distributions/php-$PHP_VERSION.tar.gz
     curl -O -SL https://github.com/xdebug/xdebug/archive/XDEBUG_2_4_0.tar.gz
 
 #Make install nginx
@@ -121,7 +127,7 @@ RUN cd /home/nginx-php && \
     --enable-exif \
     --enable-fileinfo \
     --disable-rpath \
-    --enable-ipv6 \
+ #--enable-ipv6 \
     --disable-debug \
     --without-pear && \
     make && make install
@@ -154,7 +160,7 @@ RUN cd / && rm -rf /home/nginx-php
 
 #Create web folder
 VOLUME ["$BASE_DIR", "/usr/local/nginx/conf/ssl", "/usr/local/nginx/conf/vhost", "/usr/local/php/etc/php.d"]
-RUN chown -R www:www $BASE_DIR
+
 
 ADD xdebug.ini /usr/local/php/etc/php.d/xdebug.ini
 
@@ -165,8 +171,12 @@ ADD nginx.conf /usr/local/nginx/conf/nginx.conf
 ADD start.sh /start.sh
 RUN chmod +x /start.sh
 
+#WORK DIR
+WORKDIR=/data/www
+
 #Set port
 EXPOSE 80
+EXPOSE 22
 
 #Start it
 ENTRYPOINT ["/start.sh"]
