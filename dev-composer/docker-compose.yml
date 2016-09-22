@@ -1,0 +1,33 @@
+# Website Development Environment
+version: '2'
+services:
+    php:
+        image: xaviermoon/nginx-php7:latest
+        ports:
+            - "8080:80"
+            - "8022:22"
+        volumes:
+            - "/Users/Ye/CODE/docker/php:/data/www"
+        working_dir: /data/www
+        restart: always
+        depends_on:
+             - redis
+        links:
+            # - db
+            - redis
+        stdin_open: true
+        tty: true
+        environment:
+             REDIS: redis
+    redis:
+        image: redis
+    # db:
+    # image: mysql:5.7
+    # volumes:
+    #   - "/Users/Ye/CODE/docker/php:/var/lib/mysql"
+    # restart: always
+    # environment:
+    #   MYSQL_ROOT_PASSWORD: root
+    #   MYSQL_DATABASE: yundou_db
+    #   MYSQL_USER: root
+    #   MYSQL_PASSWORD: yundoukaifa

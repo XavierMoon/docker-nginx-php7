@@ -1,0 +1,36 @@
+# Website Development Environment
+version: '1'
+services:
+    # Application Server: Website
+    php:
+        build:
+            context: ./
+            dockerfile: Dockerfile-php
+        #command: "php -S 0.0.0.0:80 -t web web/index.php"
+        ports:
+            - "8080:80"
+        volumes_from:
+            - sync
+        working_dir: /data/www
+        links:
+            - sync:sync
+        environment:
+            APPLICATION_ENV: dev
+        stdin_open: true
+        tty: true
+
+
+
+
+    # Synchronization
+    sync:
+        build:
+            context: ./
+            dockerfile: Dockerfile-sync
+        command: "lsyncd -delay 1 -nodaemon -rsync /src /data/www"
+        volumes:
+            - /data/www
+            - "./:/src"
+        working_dir: /src
+        stdin_open: true
+        tty: true

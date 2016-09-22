@@ -3,7 +3,7 @@ MAINTAINER Xavier <xaviermoonux@gmail.com>
 
 ENV NGINX_VERSION 1.10.1
 ENV PHP_VERSION 7.0.8
-
+RUN yum update -y
 RUN yum install -y gcc \
     gcc-c++ \
     autoconf \
@@ -32,8 +32,10 @@ ENV WEB_URL www.localtest.yundoukuaiji.com
 ## RUN rpm -Uvh http://mirrors.ustc.edu.cn/centos/7.0.1406/extras/x86_64/Packages/epel-release-7-5.noarch.rpm && \
 RUN rpm -ivh http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm && \
     yum install -y wget \
-    vim \   #INSTALL VIM
-    openssh-clients openssh-server \ #INSTALL SSH
+    vim \
+    openssh-server \
+    passwd \
+    openssh-clients \
     zlib \
     zlib-devel \
     openssl \
@@ -49,24 +51,17 @@ RUN rpm -ivh http://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch
     libjpeg-devel \
     freetype-devel \
     libmcrypt-devel \
-    openssh-server \
     python-setuptools && \
-    yum clean all \
+    yum clean all
 
-#SSH SERVER SETTING
-RUN echo 'root:hadoop' |chpasswd
-RUN sed -i '/pam_loginuid.so/c session optional pam_loginuid.so'  /etc/pam.d/sshd
+RUN ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -N '' 
 
 
-#Add user 不添加www用户  [ref:dev开发中文件权限问题]
-#RUN groupadd -r www && \
- #   useradd -M -s /sbin/nologin -r -g www www
 
 #Download nginx & php
 RUN mkdir -p /home/nginx-php && cd $_ && \
     wget -c -O nginx.tar.gz http://nginx.org/download/nginx-$NGINX_VERSION.tar.gz && \
     wget -O php.tar.gz http://php.net/distributions/php-$PHP_VERSION.tar.gz
-    curl -O -SL https://github.com/xdebug/xdebug/archive/XDEBUG_2_4_0.tar.gz
 
 #Make install nginx
 RUN cd /home/nginx-php && \
@@ -132,14 +127,7 @@ RUN cd /home/nginx-php && \
     --without-pear && \
     make && make install
 
-#Add xdebug extension
-RUN cd /home/nginx-php && \
-    tar -zxvf XDEBUG_2_4_0.tar.gz && \
-    cd xdebug-XDEBUG_2_4_0 && \
-    /usr/local/php/bin/phpize && \
-    ./configure --enable-xdebug --with-php-config=/usr/local/php/bin/php-config && \
-    make && \
-    cp modules/xdebug.so /usr/local/php/lib/php/extensions/no-debug-non-zts-20151012/
+
 
 RUN cd /home/nginx-php/php-$PHP_VERSION && \
     cp php.ini-production /usr/local/php/etc/php.ini && \
@@ -162,21 +150,18 @@ RUN cd / && rm -rf /home/nginx-php
 VOLUME ["$BASE_DIR", "/usr/local/nginx/conf/ssl", "/usr/local/nginx/conf/vhost", "/usr/local/php/etc/php.d"]
 
 
-ADD xdebug.ini /usr/local/php/etc/php.d/xdebug.ini
 
 #Update nginx config
 ADD nginx.conf /usr/local/nginx/conf/nginx.conf
+ADD www.conf /usr/local/php/etc/php-fpm.d/www.conf
 
 #Start
 ADD start.sh /start.sh
 RUN chmod +x /start.sh
 
-#WORK DIR
-WORKDIR=/data/www
-
 #Set port
-EXPOSE 80
-EXPOSE 22
+EXPOSE 80 22
+
 
 #Start it
 ENTRYPOINT ["/start.sh"]
